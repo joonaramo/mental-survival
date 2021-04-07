@@ -25,6 +25,8 @@ class GameUtil {
 	public double accumulator = 0;
 	public float TIME_STEP = 1 / 60f;
 
+	private int gameStep = 0;
+
 	public GameUtil() {
 		world = new World(new Vector2(0, -9.8f), true);
 
@@ -197,5 +199,11 @@ class GameUtil {
 		bodiesToBeCleared = new Array<Body>();
 	}
 
+	public int getGameStep() {
+		return gameStep;
+	}
 
+	public void setGameStep(int gameStep) {
+		this.gameStep = gameStep;
+	}
 }

@@ -38,6 +38,8 @@ import com.badlogic.gdx.physics.box2d.FixtureDef;
 import com.badlogic.gdx.physics.box2d.Manifold;
 import com.badlogic.gdx.physics.box2d.PolygonShape;
 import com.badlogic.gdx.physics.box2d.World;
+import com.badlogic.gdx.scenes.scene2d.InputEvent;
+import com.badlogic.gdx.scenes.scene2d.InputListener;
 import com.badlogic.gdx.scenes.scene2d.Stage;
 import com.badlogic.gdx.scenes.scene2d.ui.Dialog;
 import com.badlogic.gdx.scenes.scene2d.ui.Skin;
@@ -45,10 +47,14 @@ import com.badlogic.gdx.scenes.scene2d.ui.Table;
 import com.badlogic.gdx.scenes.scene2d.ui.TextButton;
 import com.badlogic.gdx.scenes.scene2d.ui.Touchpad;
 import com.badlogic.gdx.scenes.scene2d.ui.Window;
+import com.badlogic.gdx.scenes.scene2d.utils.ClickListener;
 import com.badlogic.gdx.utils.Array;
+import com.badlogic.gdx.utils.Timer;
 import com.badlogic.gdx.utils.viewport.ScreenViewport;
 
 import org.w3c.dom.css.Rect;
+
+import java.sql.Time;
 
 
 public class GameClass extends ScreenAdapter {
@@ -79,6 +85,10 @@ public class GameClass extends ScreenAdapter {
 
 	private Hud hud;
 
+	public int gameStep = 0;
+
+	private Timer timer = new Timer();
+
 	public GameClass(MentalSurvival game) {
 		this.game = game;
 	}
@@ -99,6 +109,13 @@ public class GameClass extends ScreenAdapter {
 
 		tiledMapRenderer = new OrthogonalTiledMapRenderer(gameUtil.getTiledMap(), 1 / 100f);
 		debugRenderer = new Box2DDebugRenderer();
+
+//		hud.showDialog("Nyt on kyllä ikävä tilanne! Ei auta muu kuin pitää pää kylmänä.", this);
+		/* Game Step 1 - Tutorial
+		*  Player needs to move a little using the game pad.
+		*/
+//		hud.showDialog("Liikkuaksesi saarella, liikuta peukalollasi \n vasemmalla puolla ruutua olevaa joystickiä.");
+
 
 		gameUtil.getWorld().setContactListener(new ContactListener() {
 			@Override
@@ -137,11 +154,13 @@ public class GameClass extends ScreenAdapter {
 						contact.setEnabled(false);
 						gameUtil.getBodiesToBeCleared().add(contact.getFixtureA().getBody());
 						player.setToolsCount(player.getToolsCount() + 1);
+						player.setBackpackCollected(true);
 					}
 					if(data2.type == GameObjectType.TOOL) {
 						contact.setEnabled(false);
 						gameUtil.getBodiesToBeCleared().add(contact.getFixtureB().getBody());
 						player.setToolsCount(player.getToolsCount() + 1);
+						player.setBackpackCollected(true);
 					}
 
 				}
@@ -152,10 +171,6 @@ public class GameClass extends ScreenAdapter {
 
 			}
 		});
-
-
-
-
 	}
 
 	private void clearScreen(float r, float g, float b) {
@@ -179,6 +194,9 @@ public class GameClass extends ScreenAdapter {
 		moveCamera();
 		camera.update();
 
+//		Gdx.app.log("DEBUG", "game step: " + gameStep);
+		showGameStep(gameStep);
+
 		// Render tiled map
 		tiledMapRenderer.render();
 
@@ -191,7 +209,6 @@ public class GameClass extends ScreenAdapter {
 		batch.setProjectionMatrix(hud.getStage().getCamera().combined);
 		hud.getStage().act(delta);
 		hud.getStage().draw();
-
 
 		// Clear bodies
 		gameUtil.clearBodies();
@@ -226,6 +243,95 @@ public class GameClass extends ScreenAdapter {
 		if(camera.position.x > (WORLD_WIDTH_PIXELS - WORLD_WIDTH * 100 / 2) / 100) {
 			camera.position.x = (WORLD_WIDTH_PIXELS - WORLD_WIDTH * 100 / 2) / 100;
 		}
+	}
+
+	public void setGameStep(int gameStep) {
+		this.gameStep = gameStep;
+	}
+
+	public int getGameStep() {
+		return gameStep;
+	}
+
+	public void nextGameStep() {
+		hud.getOkButton().addListener(new ClickListener() {
+			@Override
+			public void clicked(InputEvent event, float x, float y) {
+				setGameStep(getGameStep() + 1);
+			};
+		});
+	}
+
+	public void delayNextGameStep(float delay) {
+		Timer.schedule(new Timer.Task(){
+			@Override
+			public void run() {
+				setGameStep(getGameStep() + 1);
+				Timer.instance().clear();
+			}
+		}, delay);
+	}
+
+	public void showGameStep(int gameStep) {
+		switch (gameStep) {
+			case 0:
+				hud.showDialog("Onpas kiperä tilanne! Nyt täytyy pitää pää kylmänä.", this);
+				nextGameStep();
+				break;
+			case 1:
+				hud.showDialog("Liikkuaksesi saarella, liikuta peukalollasi \nvasemmalla puolella ruutua olevaa joystickiä.", this);
+				nextGameStep();
+				break;
+			case 2:
+				delayNextGameStep(5);
+				break;
+			case 3:
+				hud.showDialog("Juuri noin! Etsi seuraavaksi itsellesi reppu, jotta voit kerätä saarelta tarvikkeita.", this);
+				nextGameStep();
+				break;
+			case 4:
+				if(player.isBackpackCollected()) {
+					hud.showBackpack();
+					setGameStep(getGameStep() + 1);
+				}
+				break;
+			case 5:
+				hud.showDialog("Nyt sinulta löytyy reppu! Sen sisälläkin näyttäisi jo olevan jotakin!", this);
+				nextGameStep();
+				break;
+			case 6:
+				hud.showDialog("Voit nyt vapaasti kiertää saarta ympäri ja etsiä tarpeellisia esineitä!", this);
+				nextGameStep();
+				break;
+			case 7:
+				delayNextGameStep(20);
+				break;
+			case 8:
+				hud.showDialog("Alkaa olla myöhä ja sinua väsyttää. Rakenna itsellesi yöpymispaikka, jotta saat tarpeeksi lepoa!", this);
+				nextGameStep();
+				break;
+		}
+//		if(gameStep == 1) {
+//			hud.showDialog("Liikkuaksesi saarella, liikuta peukalollasi \nvasemmalla puolella ruutua olevaa joystickiä.", this);
+//		}
+//		if(gameStep == 2) {
+//			Timer.schedule(new Timer.Task(){
+//				@Override
+//				public void run() {
+//						showGameStep(3);
+//						setGameStep(3);
+//				}
+//			}, 7);
+//		}
+//		if(gameStep == 3) {
+//			hud.showDialog("Juuri noin! Etsi seuraavaksi itsellesi reppu, jotta voit kerätä saarelta tarvikkeita.", this);
+//		}
+//		if (gameStep == 4) {
+//			Gdx.app.log("DEBUG", "we got 4 !");
+//			if(player.isBackpackCollected()) {
+//				hud.showBackpack();
+//			}
+//		}
 	}
 
 

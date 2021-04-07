@@ -32,6 +32,9 @@ public class Hud {
     private BitmapFont font132;
     private Label dialogLabel;
     private TextButton okButton;
+    private TextButton toolsButton;
+    private boolean dialogOpen = false;
+    private Dialog plotDialog;
 
     public Hud(SpriteBatch spriteBatch) {
         initialize(spriteBatch);
@@ -42,32 +45,23 @@ public class Hud {
         table.add(sanityLevel).size(sanityLevel.getWidth(), sanityLevel.getHeight()).expand().top();
         table.row();
 
-        // Dialog
-        showDialog("Nyt on kyllä ikävä tilanne! Ei auta muu kuin pitää pää kylmänä.");
-
         // Joystick
         table.add(joystickControl.getTouchpad()).size(joystickControl.getTouchpad().getWidth(), joystickControl.getTouchpad().getHeight()).expand().left().bottom().padLeft(80);
 
         // Backpack
-        TextButton toolsButton = new TextButton("BACKPACK", skin);
+        toolsButton = new TextButton("BACKPACK", skin);
         toolsButton.getLabel().setStyle(labelStyle);
         table.row();
         table.add(toolsButton).size(toolsButton.getPrefWidth(), toolsButton.getPrefHeight() * 2).expand().right().padRight(20);
+        toolsButton.setVisible(false);
+//        showBackpack();
+
+
 
         toolsButton.addListener( new ClickListener() {
             @Override
             public void clicked(InputEvent event, float x, float y) {
-                Label toolsDialogLabel = new Label("Wood: 0 \nWater bottle: EMPTY \nMatches: 5", labelStyle);
-                okButton.getLabel().setStyle(labelStyle);
-                table.row();
-                Dialog toolsDialog = new Dialog("", skin) {
-                    {
-                    }
-                };
-                toolsDialog.text(toolsDialogLabel);
-                toolsDialog.getButtonTable().row();
-                toolsDialog.button(okButton);
-                toolsDialog.show(stage);
+                openBackpack("Wood: 0 \nWater bottle: EMPTY \nMatches: 5");
             };
         });
 
@@ -92,13 +86,7 @@ public class Hud {
         font64 = generator.generateFont(parameter);
         generator.dispose();
 
-        // Dialog label and button styling
         labelStyle = new Label.LabelStyle();
-        labelStyle.font = font64;
-
-        dialogLabel = new Label("", labelStyle);
-        okButton = new TextButton("OK", skin);
-        okButton.getLabel().setStyle(labelStyle);
 
         // Create joystick
         joystickBg = new Texture("joystickBg.png");
@@ -106,16 +94,73 @@ public class Hud {
         joystickControl = new JoystickControl(joystickBg, joystickKnob, 10, 0, 0, 400, 400);
     }
 
-    public void showDialog(String dialogText) {
+
+
+    public void showDialog(String dialogText, final GameClass game) {
+        // Dialog label and button styling
+        labelStyle.font = font64;
+        dialogLabel = new Label(dialogText, labelStyle);
+        okButton = new TextButton("OK", skin);
+        okButton.getLabel().setStyle(labelStyle);
+
+         plotDialog = new Dialog("", skin) {
+            {
+            }
+            @Override
+            protected void result(final Object object) {
+//                int gameStep = gameUtil.getGameStep();
+//                gameUtil.setGameStep(gameStep + 1);
+//                  game.showGameStep(game.getGameStep() + 1);
+//                  game.setGameStep(game.getGameStep() + 1);
+                dialogOpen = false;
+//                game.setGameStep(game.getGameStep() + 1);
+            }
+        };
+        plotDialog.text(dialogLabel);
+        plotDialog.getButtonTable().row();
+        plotDialog.button(okButton);
+
+        if(!dialogOpen) {
+            dialogOpen = true;
+            plotDialog.show(stage);
+        }
+    }
+
+    public void openBackpack(String backpackText) {
+        // Dialog label and button styling
+        labelStyle.font = font64;
+        dialogLabel = new Label(backpackText, labelStyle);
+        okButton = new TextButton("OK", skin);
+        okButton.getLabel().setStyle(labelStyle);
+
         Dialog dialog = new Dialog("", skin) {
             {
             }
         };
-        dialogLabel.setText(dialogText);
         dialog.text(dialogLabel);
         dialog.getButtonTable().row();
         dialog.button(okButton);
         dialog.show(stage);
+    }
+
+    public void showBackpack() {
+        toolsButton.setVisible(true);
+    }
+
+    public Boolean getDialogOpen() {
+        return dialogOpen;
+    }
+
+    public void setDialogOpen(Boolean dialogOpen) {
+        this.dialogOpen = dialogOpen;
+    }
+
+    public Dialog getPlotDialog() {
+        return plotDialog;
+    }
+
+    public TextButton getOkButton() {
+        return okButton;
     }
 
     public Stage getStage() { return stage; }

@@ -16,6 +16,7 @@ class Player {
 	private int sanityLevel = 0;
 	private int toolsCount = 0;
 	private float speed = 0.015f;
+	private boolean backpackCollected = false;
 
 	private Texture texture;
 	private Animation<TextureRegion> walkAnimation;
@@ -94,6 +95,14 @@ class Player {
 
 	public void setToolsCount(int toolsCount) {
 		this.toolsCount = toolsCount;
+	}
+
+	public void setBackpackCollected(boolean backpackCollected) {
+		this.backpackCollected = backpackCollected;
+	}
+
+	public boolean isBackpackCollected() {
+		return backpackCollected;
 	}
 
 	public void movePlayer(JoystickControl joystickControl) {
