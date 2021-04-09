@@ -14,9 +14,12 @@ import com.badlogic.gdx.physics.box2d.World;
 class Player {
 	private float radius = 0.15f;
 	private int sanityLevel = 0;
-	private int toolsCount = 0;
+	private int woodCount = 0;
+	private int matchCount = 5;
+	private boolean hasWater = false;
 	private float speed = 0.015f;
 	private boolean backpackCollected = false;
+	private boolean canFish = false;
 
 	private Texture texture;
 	private Animation<TextureRegion> walkAnimation;
@@ -77,12 +80,32 @@ class Player {
 		return radius;
 	}
 
-	public int getToolsCount() {
-		return toolsCount;
+	public int getWoodCount() {
+		return woodCount;
 	}
 
 	public int getSanityLevel() {
 		return sanityLevel;
+	}
+
+	public int getMatchCount() {
+		return matchCount;
+	}
+
+	public boolean isBackpackCollected() {
+		return backpackCollected;
+	}
+
+	public boolean canFish() {
+		return canFish;
+	}
+
+	public boolean hasWater() {
+		return hasWater;
+	}
+
+	public void setCanFish(boolean canFish) {
+		this.canFish = canFish;
 	}
 
 	public void setSpeed(float speed) {
@@ -93,40 +116,24 @@ class Player {
 		this.sanityLevel = sanityLevel;
 	}
 
-	public void setToolsCount(int toolsCount) {
-		this.toolsCount = toolsCount;
+	public void setWoodCount(int woodCount) {
+		this.woodCount = woodCount;
+	}
+
+	public void setMatchCount(int matchCount) {
+		this.matchCount = matchCount;
+	}
+
+	public void setHasWater(boolean hasWater) {
+		this.hasWater = hasWater;
 	}
 
 	public void setBackpackCollected(boolean backpackCollected) {
 		this.backpackCollected = backpackCollected;
 	}
 
-	public boolean isBackpackCollected() {
-		return backpackCollected;
-	}
 
 	public void movePlayer(JoystickControl joystickControl) {
-//		Gdx.app.log("X", String.valueOf(playerBody.getPosition().x));
-//		Gdx.app.log("SPEED", String.valueOf(PLAYER_SPEED));
-
-//		if(Gdx.input.isKeyPressed(Input.Keys.LEFT)) {
-//			changeDirection(LEFT);
-//			walk();
-//			getBody().setTransform(getBody().getPosition().x - getSpeed(), getBody().getPosition().y, getBody().getAngle());
-//		}
-//		if(Gdx.input.isKeyPressed(Input.Keys.RIGHT)) {
-//			changeDirection(RIGHT);
-//			walk();
-//			getBody().setTransform(getBody().getPosition().x + getSpeed(), getBody().getPosition().y, getBody().getAngle());
-//		}
-//		if(Gdx.input.isKeyPressed(Input.Keys.UP)) {
-//			walk();
-//			getBody().setTransform(getBody().getPosition().x, getBody().getPosition().y + getSpeed(), getBody().getAngle());
-//		}
-//		if(Gdx.input.isKeyPressed(Input.Keys.DOWN)) {
-//			walk();
-//			getBody().setTransform(getBody().getPosition().x, getBody().getPosition().y - getSpeed(), getBody().getAngle());
-//		}
 		float velX = 0, velY = 0;
 
 		if(joystickControl.getTouchpad().isTouched()) {

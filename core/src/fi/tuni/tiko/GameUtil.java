@@ -39,6 +39,7 @@ class GameUtil {
 		transformWallsToBodies("world-wall-rectangles", "wall");
 		transformWallsToBodies("tools-rectangles", "tool");
 		transformWallsToBodies("edibles-rectangles", "collectible");
+		transformWallsToBodies("fishing-rectangles", "fishing-area");
 
 
 		// Create ground to the world
@@ -146,6 +147,8 @@ class GameUtil {
 
 		myBodyDef.position.set(centerX, centerY);
 
+//		Gdx.app.log("DEBUG", "rectangle width" + width);
+
 		GameObjectType type = null;
 
 		if(userData.equals("wall")) {
@@ -154,6 +157,8 @@ class GameUtil {
 			type = GameObjectType.COLLECTIBLE;
 		} else if(userData.equals("tool")) {
 			type = GameObjectType.TOOL;
+		} else if(userData.equals("fishing-area")) {
+			type = GameObjectType.FISHING;
 		}
 
 		GameObjectInfo gameObject = new GameObjectInfo(type, x, y);
