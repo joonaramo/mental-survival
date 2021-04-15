@@ -4,6 +4,7 @@ import com.badlogic.gdx.ApplicationAdapter;
 import com.badlogic.gdx.Game;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
+import com.badlogic.gdx.Preferences;
 import com.badlogic.gdx.ScreenAdapter;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.GL20;
@@ -52,6 +53,7 @@ import com.badlogic.gdx.utils.Array;
 import com.badlogic.gdx.utils.Timer;
 import com.badlogic.gdx.utils.viewport.ScreenViewport;
 
+import org.w3c.dom.Text;
 import org.w3c.dom.css.Rect;
 
 import java.sql.Time;
@@ -80,8 +82,6 @@ public class GameClass extends ScreenAdapter {
 	private TiledMapRenderer tiledMapRenderer;
 	private Box2DDebugRenderer debugRenderer;
 
-	private Player player;
-	private GameUtil gameUtil;
 
 	private GameObject shelterObject;
 	private GameObject fireObject;
@@ -89,13 +89,9 @@ public class GameClass extends ScreenAdapter {
 	private Texture noFireTexture;
 	private Texture fireTexture;
 	private Texture shelterTexture;
-
+	private Texture sleepingTexture;
 
 	private Hud hud;
-
-	public int gameStep = 0;
-
-	private Timer timer = new Timer();
 
 	public GameClass(MentalSurvival game) {
 		this.game = game;
@@ -103,17 +99,20 @@ public class GameClass extends ScreenAdapter {
 
 	@Override
 	public void show() {
-		gameUtil = new GameUtil();
-		player = new Player(gameUtil.getWorld());
 
-		shelterTexture = new Texture(Gdx.files.internal("fire.png"));
+		shelterTexture = new Texture(Gdx.files.internal("shelter.png"));
+		sleepingTexture = new Texture(Gdx.files.internal("shelter_player.png"));
 		fireTexture = new Texture(Gdx.files.internal("fire.png"));
 		noFireTexture = new Texture(Gdx.files.internal("no_fire.png"));
 
 		// Create SpriteBatch
 		batch = new SpriteBatch();
 
-		hud = new Hud(batch);
+		GameUtil.loadGame(game);
+
+		GameUtil.clearOldBodies(game);
+
+		hud = new Hud(batch, game);
 
 		hud.getActionButton().addListener(new ClickListener() {
 			@Override
@@ -126,7 +125,7 @@ public class GameClass extends ScreenAdapter {
 		camera = new OrthographicCamera();
 		camera.setToOrtho(false, WORLD_WIDTH, WORLD_HEIGHT);
 
-		tiledMapRenderer = new OrthogonalTiledMapRenderer(gameUtil.getTiledMap(), 1 / 100f);
+		tiledMapRenderer = new OrthogonalTiledMapRenderer(game.getTiledMap(), 1 / 100f);
 		debugRenderer = new Box2DDebugRenderer();
 
 //		hud.showDialog("Nyt on kyllä ikävä tilanne! Ei auta muu kuin pitää pää kylmänä.", this);
@@ -136,7 +135,7 @@ public class GameClass extends ScreenAdapter {
 //		hud.showDialog("Liikkuaksesi saarella, liikuta peukalollasi \n vasemmalla puolla ruutua olevaa joystickiä.");
 
 
-		gameUtil.getWorld().setContactListener(new ContactListener() {
+		game.getWorld().setContactListener(new ContactListener() {
 			@Override
 			public void beginContact(Contact contact) {
 
@@ -152,10 +151,10 @@ public class GameClass extends ScreenAdapter {
 //					Gdx.app.log("DEBUG", String.valueOf(data1.type));
 //					Gdx.app.log("DEBUG", String.valueOf(data2.type));
 					if(data1.type == GameObjectType.FISHING) {
-						player.setCanFish(false);
+						game.getPlayer().setCanFish(false);
 					}
 					if(data2.type == GameObjectType.FISHING) {
-						player.setCanFish(false);
+						game.getPlayer().setCanFish(false);
 					}
 
 				}
@@ -174,35 +173,53 @@ public class GameClass extends ScreenAdapter {
 
 					if(data1.type == GameObjectType.COLLECTIBLE) {
 						contact.setEnabled(false);
-						gameUtil.getBodiesToBeCleared().add(contact.getFixtureA().getBody());
-						player.setSanityLevel(player.getSanityLevel() + 25);
-						player.setSpeed(player.getSpeed() + 0.003f);
+						game.getBodiesToBeCleared().add(contact.getFixtureA().getBody());
+						game.getClearedBodies().add(contact.getFixtureA().getBody());
+						game.getPlayer().setSanityLevel(game.getPlayer().getSanityLevel() + 25);
+						game.getPlayer().setSpeed(game.getPlayer().getSpeed() + 0.003f);
 					}
 					if(data2.type == GameObjectType.COLLECTIBLE) {
 						contact.setEnabled(false);
-						gameUtil.getBodiesToBeCleared().add(contact.getFixtureB().getBody());
-						player.setSanityLevel(player.getSanityLevel() + 25);
-						player.setSpeed(player.getSpeed() + 0.003f);
+						game.getBodiesToBeCleared().add(contact.getFixtureB().getBody());
+						game.getClearedBodies().add(contact.getFixtureB().getBody());
+						game.getPlayer().setSanityLevel(game.getPlayer().getSanityLevel() + 25);
+						game.getPlayer().setSpeed(game.getPlayer().getSpeed() + 0.003f);
 					}
 					if(data1.type == GameObjectType.TOOL) {
-						contact.setEnabled(false);
-						gameUtil.getBodiesToBeCleared().add(contact.getFixtureA().getBody());
-						player.setWoodCount(player.getWoodCount() + 1);
-						player.setBackpackCollected(true);
+						if(game.getPlayer().isBackpackCollected()) {
+							contact.setEnabled(false);
+							game.getBodiesToBeCleared().add(contact.getFixtureA().getBody());
+							game.getClearedBodies().add(contact.getFixtureA().getBody());
+							game.getPlayer().setWoodCount(game.getPlayer().getWoodCount() + 1);
+						}
 					}
 					if(data2.type == GameObjectType.TOOL) {
+						if(game.getPlayer().isBackpackCollected()) {
+							contact.setEnabled(false);
+							game.getBodiesToBeCleared().add(contact.getFixtureA().getBody());
+							game.getClearedBodies().add(contact.getFixtureA().getBody());
+							game.getPlayer().setWoodCount(game.getPlayer().getWoodCount() + 1);
+						}
+					}
+					if(data1.type == GameObjectType.BACKPACK) {
 						contact.setEnabled(false);
-						gameUtil.getBodiesToBeCleared().add(contact.getFixtureB().getBody());
-						player.setWoodCount(player.getWoodCount() + 1);
-						player.setBackpackCollected(true);
+						game.getBodiesToBeCleared().add(contact.getFixtureA().getBody());
+						game.getClearedBodies().add(contact.getFixtureA().getBody());
+						game.getPlayer().setBackpackCollected(true);
+					}
+					if(data2.type == GameObjectType.BACKPACK) {
+						contact.setEnabled(false);
+						game.getBodiesToBeCleared().add(contact.getFixtureB().getBody());
+						game.getClearedBodies().add(contact.getFixtureB().getBody());
+						game.getPlayer().setBackpackCollected(true);
 					}
 					if(data1.type == GameObjectType.FISHING) {
 						contact.setEnabled(false);
-						player.setCanFish(true);
+						game.getPlayer().setCanFish(true);
 					}
 					if(data2.type == GameObjectType.FISHING) {
 						contact.setEnabled(false);
-						player.setCanFish(true);
+						game.getPlayer().setCanFish(true);
 					}
 
 				}
@@ -225,33 +242,38 @@ public class GameClass extends ScreenAdapter {
 		clearScreen(0, 0, 0);
 
 		if(DEBUG_PHYSICS) {
-			debugRenderer.render(gameUtil.getWorld(), camera.combined);
+			debugRenderer.render(game.getWorld(), camera.combined);
 		}
 
 		tiledMapRenderer.setView(camera);
 
 		// Move player and camera
-		player.movePlayer(hud.getJoystickControl());
+		game.getPlayer().movePlayer(hud.getJoystickControl());
 		moveCamera();
 		camera.update();
 
-		hud.updateSanityBar(player.getSanityLevel());
-		hud.updateBackpack(player.getWoodCount(), player.getMatchCount(), player.hasWater());
+		hud.updateSanityBar(game.getPlayer().getSanityLevel());
+		hud.updateBackpack(game.getPlayer().getWoodCount(), game.getPlayer().getMatchCount(), game.getPlayer().hasWater());
 
 //		Gdx.app.log("DEBUG", "game step: " + gameStep);
-		showGameStep(gameStep);
+		showGameStep(game.getGameStep());
 
 		// Render tiled map
 		tiledMapRenderer.render();
 
 		// Draw player texture
 		batch.begin();
-		batch.draw(player.getCurrentFrameTexture(), player.getBody().getPosition().x - player.getRadius(), player.getBody().getPosition().y - player.getRadius(), player.getRadius() * 2, player.getRadius() * 2);
+		game.getPlayer().draw(batch);
+
 		if(shelterObject != null) {
-			batch.draw(shelterTexture, shelterObject.getX(), shelterObject.getY(), shelterObject.getWidth(), shelterObject.getHeight());
+			if(game.getPlayer().isSleeping()) {
+				batch.draw(sleepingTexture, shelterObject.getX(), shelterObject.getY(), shelterObject.getWidth(), shelterObject.getHeight());
+			} else {
+				batch.draw(shelterTexture, shelterObject.getX(), shelterObject.getY(), shelterObject.getWidth(), shelterObject.getHeight());
+			}
 		}
 		if(fireObject != null) {
-			if(fireObject.isOnFire()) {
+			if(fireObject.isActive()) {
 				batch.draw(fireTexture, fireObject.getX(), fireObject.getY(), fireObject.getWidth(), fireObject.getHeight());
 			} else {
 				batch.draw(noFireTexture, fireObject.getX(), fireObject.getY(), fireObject.getWidth(), fireObject.getHeight());
@@ -265,16 +287,35 @@ public class GameClass extends ScreenAdapter {
 		hud.getStage().draw();
 
 		// Clear bodies
-		gameUtil.clearBodies();
+		GameUtil.clearBodies(game);
 
+		doPhysicsStep(Gdx.graphics.getDeltaTime());
+	}
 
-		gameUtil.doPhysicsStep(Gdx.graphics.getDeltaTime());
+	double accumulator = 0;
+	float TIME_STEP = 1 / 60f;
 
+	public void doPhysicsStep(float deltaTime) {
+		float frameTime = deltaTime;
+
+		// If it took ages (over 4 fps, then use 4 fps)
+		// Avoid of "spiral of death"
+		if(deltaTime > 1 / 4f) {
+			frameTime = 1 / 4f;
+		}
+
+		accumulator += frameTime;
+
+		while (accumulator >= TIME_STEP) {
+			// It's fixed time step!
+			game.getWorld().step(TIME_STEP, 6, 2);
+			accumulator -= TIME_STEP;
+		}
 	}
 
 	public void moveCamera() {
-		camera.position.set(player.getBody().getPosition().x,
-				player.getBody().getPosition().y,
+		camera.position.set(game.getPlayer().getBody().getPosition().x,
+				game.getPlayer().getBody().getPosition().y,
 				0);
 
 
@@ -299,19 +340,19 @@ public class GameClass extends ScreenAdapter {
 		}
 	}
 
-	public void setGameStep(int gameStep) {
-		this.gameStep = gameStep;
-	}
+//	public void setGameStep(int gameStep) {
+//		this.gameStep = gameStep;
+//	}
 
-	public int getGameStep() {
-		return gameStep;
-	}
+//	public int getGameStep() {
+//		return gameStep;
+//	}
 
 	public void nextGameStep() {
 		hud.getOkButton().addListener(new ClickListener() {
 			@Override
 			public void clicked(InputEvent event, float x, float y) {
-				setGameStep(getGameStep() + 1);
+				game.setGameStep(game.getGameStep() + 1);
 			};
 		});
 	}
@@ -320,7 +361,7 @@ public class GameClass extends ScreenAdapter {
 		Timer.schedule(new Timer.Task(){
 			@Override
 			public void run() {
-				setGameStep(getGameStep() + 1);
+				game.setGameStep(game.getGameStep() + 1);
 				Timer.instance().clear();
 			}
 		}, delay);
@@ -345,9 +386,11 @@ public class GameClass extends ScreenAdapter {
 				nextGameStep();
 				break;
 			case 4:
-				if(player.isBackpackCollected()) {
+				if(game.getPlayer().isBackpackCollected()) {
 					hud.showBackpack();
-					setGameStep(getGameStep() + 1);
+					game.getPlayer().createWalkAnimation();
+					game.getPlayer().changeDirection(true);
+					game.setGameStep(game.getGameStep() + 1);
 				}
 				break;
 			case 5:
@@ -366,7 +409,7 @@ public class GameClass extends ScreenAdapter {
 				nextGameStep();
 				break;
 			case 9:
-				if(player.getWoodCount() >= 3) {
+				if(game.getPlayer().getWoodCount() >= 3) {
 					hud.showDialog("Olet nyt kerännyt tarpeeksi materiaalia majan rakentamiseen!");
 					nextGameStep();
 				}
@@ -375,11 +418,11 @@ public class GameClass extends ScreenAdapter {
 				hud.getActionButton().getLabel().setText("BUILD");
 				hud.getActionButton().setVisible(true);
 				if(hud.isActionButtonPressed()) {
-					shelterObject = new GameObject(gameUtil, player.getBody().getPosition().x + 0.4f, player.getBody().getPosition().y, shelterTexture.getWidth() / 100f / 2, shelterTexture.getHeight() / 100f / 2, "shelter");
+					shelterObject = new GameObject(game.getPlayer().getBody().getPosition().x + 0.4f, game.getPlayer().getBody().getPosition().y, shelterTexture.getWidth() / 100f / 2, shelterTexture.getHeight() / 100f / 2, "shelter", game.getWorld());
 					hud.getActionButton().setVisible(false);
 					hud.setActionButtonPressed(false);
-					player.setWoodCount(player.getWoodCount() - 3);
-					setGameStep(getGameStep() + 1);
+					game.getPlayer().setWoodCount(game.getPlayer().getWoodCount() - 3);
+					game.setGameStep(game.getGameStep() + 1);
 				}
 				break;
 			case 11:
@@ -388,72 +431,106 @@ public class GameClass extends ScreenAdapter {
 				if(hud.isActionButtonPressed()) {
 					hud.getActionButton().setVisible(false);
 					hud.setActionButtonPressed(false);
-					setGameStep(getGameStep() + 1);
+					game.getPlayer().setSleeping(true);
+					game.setGameStep(game.getGameStep() + 1);
 				}
 				break;
 			case 12:
+				delayNextGameStep(10);
+				break;
+			case 13:
+				game.getPlayer().setSleeping(false);
 				hud.showDialog("Tulipas yö nukuttua huonosti. Hirveä nälkäkin iski! Täytyy etsiä jotakin syötävää.");
 				nextGameStep();
 				break;
-			case 13:
-				if(player.canFish()) {
+			case 14:
+				if(game.getPlayer().canFish()) {
 					hud.getActionButton().getLabel().setText("FISH");
 					hud.getActionButton().setVisible(true);
 					if(hud.isActionButtonPressed()) {
 						hud.getActionButton().setVisible(false);
 						hud.setActionButtonPressed(false);
-						setGameStep(getGameStep() + 1);
+						game.setGameStep(game.getGameStep() + 1);
 					}
 				} else {
 					hud.getActionButton().setVisible(false);
 				}
 				break;
-			case 14:
+			case 15:
 				hud.showDialog("Raaka kala ei ole hyväksi, täytyy laittaa erätaidot kehiin ja tehdä tuli.\n Kerää materiaalia tulentekoon.");
 				nextGameStep();
 				break;
-			case 15:
-				if(player.getWoodCount() >= 3) {
+			case 16:
+				if(game.getPlayer().getWoodCount() >= 3) {
 					hud.showDialog("Olet nyt kerännyt tarpeeksi materiaalia tulentekoon!");
 					nextGameStep();
 				}
 				break;
-			case 16:
+			case 17:
 				hud.getActionButton().getLabel().setText("USE WOOD");
 				hud.getActionButton().setWidth(hud.getActionButton().getPrefWidth());
 				hud.getActionButton().setPosition(hud.getActionButton().getX(), hud.getActionButton().getY());
 				hud.getActionButton().setVisible(true);
 				if(hud.isActionButtonPressed()) {
-					fireObject = new GameObject(gameUtil, player.getBody().getPosition().x + 0.4f, player.getBody().getPosition().y, noFireTexture.getWidth() / 100f / 2, noFireTexture.getHeight() / 100f / 2, "fire");
+					fireObject = new GameObject(game.getPlayer().getBody().getPosition().x + 0.4f, game.getPlayer().getBody().getPosition().y, noFireTexture.getWidth() / 100f / 2, noFireTexture.getHeight() / 100f / 2, "fire", game.getWorld());
 					hud.getActionButton().setVisible(false);
 					hud.setActionButtonPressed(false);
-					player.setWoodCount(player.getWoodCount() - 3);
-					setGameStep(getGameStep() + 1);
-				}
-				break;
-			case 17:
-				hud.getActionButton().getLabel().setText("SET FIRE");
-				hud.getActionButton().setVisible(true);
-				if(hud.isActionButtonPressed()) {
-					fireObject.setOnFire(true);
-					hud.getActionButton().setVisible(false);
-					hud.setActionButtonPressed(false);
-					setGameStep(getGameStep() + 1);
+					game.getPlayer().setWoodCount(game.getPlayer().getWoodCount() - 3);
+					game.setGameStep(game.getGameStep() + 1);
 				}
 				break;
 			case 18:
-				hud.getActionButton().getLabel().setText("COOK AND EAT");
+				hud.getActionButton().getLabel().setText("SET FIRE");
 				hud.getActionButton().setVisible(true);
 				if(hud.isActionButtonPressed()) {
-					player.setSanityLevel(player.getSanityLevel() + 20);
+					fireObject.setActive(true);
 					hud.getActionButton().setVisible(false);
 					hud.setActionButtonPressed(false);
-					setGameStep(getGameStep() + 1);
+					game.setGameStep(game.getGameStep() + 1);
 				}
 				break;
 			case 19:
+				hud.getActionButton().getLabel().setText("COOK AND EAT");
+				hud.getActionButton().setVisible(true);
+				if(hud.isActionButtonPressed()) {
+					game.getPlayer().setSanityLevel(game.getPlayer().getSanityLevel() + 20);
+					hud.getActionButton().setVisible(false);
+					hud.setActionButtonPressed(false);
+					game.setGameStep(game.getGameStep() + 1);
+				}
+				break;
+			case 20:
+				fireObject.setActive(false);
 				hud.showDialog("Tekipäs syöminen hyvää! Nyt kyllä janottaa. Näissä olosuhteissa täytyy \npitää huoli nestetasapainosta \nEtsi juoksevan veden lähde.");
 				nextGameStep();
+				break;
+			case 21:
+				if(game.getPlayer().canFish()) {
+					hud.getActionButton().getLabel().setText("GET WATER");
+					hud.getActionButton().setVisible(true);
+					if(hud.isActionButtonPressed()) {
+						hud.getActionButton().setVisible(false);
+						hud.setActionButtonPressed(false);
+						game.getPlayer().setHasWater(true);
+						game.setGameStep(game.getGameStep() + 1);
+					}
+				} else {
+					hud.getActionButton().setVisible(false);
+				}
+				break;
+			case 22:
+				if(game.getPlayer().hasWater()) {
+					hud.getActionButton().getLabel().setText("DRINK WATER");
+					hud.getActionButton().setVisible(true);
+					if(hud.isActionButtonPressed()) {
+						game.getPlayer().setSanityLevel(game.getPlayer().getSanityLevel() + 20);
+						game.getPlayer().setHasWater(false);
+						hud.getActionButton().setVisible(false);
+						hud.setActionButtonPressed(false);
+						game.setGameStep(game.getGameStep() + 1);
+					}
+				}
+				break;
 			default:
 				break;
 		}
@@ -461,7 +538,12 @@ public class GameClass extends ScreenAdapter {
 
 
 	public void dispose() {
-		gameUtil.getWorld().dispose();
-		player.getTexture().dispose();
+		game.getWorld().dispose();
+		game.getPlayer().getTexture().dispose();
+		game.getPlayer().getBackpackTexture().dispose();
+		shelterTexture.dispose();
+		sleepingTexture.dispose();
+		fireTexture.dispose();
+		noFireTexture.dispose();
 	}
 }

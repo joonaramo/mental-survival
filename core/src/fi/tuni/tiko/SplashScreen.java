@@ -8,6 +8,7 @@ import com.badlogic.gdx.ScreenAdapter;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.Texture;
+import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.scenes.scene2d.InputEvent;
 import com.badlogic.gdx.scenes.scene2d.Stage;
@@ -16,12 +17,14 @@ import com.badlogic.gdx.scenes.scene2d.ui.TextButton;
 import com.badlogic.gdx.scenes.scene2d.utils.ClickListener;
 import com.badlogic.gdx.utils.viewport.ScreenViewport;
 
+import java.awt.Menu;
+
 public class SplashScreen extends ScreenAdapter {
-    MentalSurvival game;
-    Texture background;
-    OrthographicCamera camera;
-    Stage stage;
-    Table table;
+    private MentalSurvival game;
+    private Texture background;
+    private OrthographicCamera camera;
+    private Stage stage;
+    private Table table;
 
     public SplashScreen(MentalSurvival game) {
         this.game = game;
@@ -33,7 +36,7 @@ public class SplashScreen extends ScreenAdapter {
         float h = Gdx.graphics.getHeight();
         camera = new OrthographicCamera();
         camera.setToOrtho(false, 8, 4.8f);
-        background = new Texture("Titlescreen.png");
+        background = new Texture(Gdx.files.internal("Titlescreen.png"));
 
         stage = new Stage(new ScreenViewport());
         Gdx.input.setInputProcessor(stage);
@@ -46,8 +49,7 @@ public class SplashScreen extends ScreenAdapter {
 
         TextButton.TextButtonStyle style = new TextButton.TextButtonStyle();
 
-
-        style.font = game.font;
+        style.font = new BitmapFont();
 
         TextButton button1 = new TextButton("PLAY", style);
 
@@ -58,12 +60,9 @@ public class SplashScreen extends ScreenAdapter {
         button1.addListener( new ClickListener() {
             @Override
             public void clicked(InputEvent event, float x, float y) {
-                Gdx.app.log("TAG", "hello");
-                game.setScreen(new GameClass(game));
+                game.setScreen(new MenuScreen(game));
             };
         });
-
-
 
     }
 

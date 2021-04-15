@@ -3,6 +3,7 @@ package fi.tuni.tiko;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.math.Rectangle;
+import com.badlogic.gdx.physics.box2d.World;
 
 public class GameObject {
     private Texture texture;
@@ -11,14 +12,14 @@ public class GameObject {
     private float width;
     private float height;
     private boolean visible = false;
-    private boolean onFire = false;
+    private boolean active = false;
 
-    public GameObject(GameUtil gameUtil, float x, float y, float width, float height, String userData) {
+    public GameObject(float x, float y, float width, float height, String userData, World world) {
         this.x = x;
         this.y = y;
         this.width = width;
         this.height = height;
-        gameUtil.createStaticBody(new Rectangle(x, y, width, height), userData);
+        GameUtil.createStaticBody(new Rectangle(x, y, width, height), userData, world);
 //        Gdx.app.log("DEBUG", "created gameobject to" + x);
     }
 
@@ -42,12 +43,12 @@ public class GameObject {
         return visible;
     }
 
-    public boolean isOnFire() {
-        return onFire;
+    public boolean isActive() {
+        return active;
     }
 
-    public void setOnFire(boolean onFire) {
-        this.onFire = onFire;
+    public void setActive(boolean active) {
+        this.active = active;
     }
 
     public void setVisible(boolean visible) {

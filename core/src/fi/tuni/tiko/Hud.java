@@ -26,14 +26,11 @@ import com.badlogic.gdx.graphics.Color;
 public class Hud {
     private Stage stage;
     private Skin skin;
-    private Table table;
-    private Texture joystickBg;
-    private Texture joystickKnob;
+    private Table root;
     private JoystickControl joystickControl;
     private Label.LabelStyle labelStyle;
     private BitmapFont font64;
     private BitmapFont font132;
-    private Label dialogLabel;
     private Label woodLabel;
     private Label matchLabel;
     private Label waterBottleLabel;
@@ -52,44 +49,59 @@ public class Hud {
     private Texture sanityBar100;
     private Image currentSanity;
 
-    private Texture woodTexture;
-    private Texture matchesTexture;
-    private Texture waterBottleTexture;
-
     private Image woodImage;
     private Image matchesImage;
     private Image waterBottleImage;
 
-    public Hud(SpriteBatch spriteBatch) {
+    public Hud(SpriteBatch spriteBatch, final MentalSurvival game) {
         initialize(spriteBatch);
 
-        // Sanity bar
         labelStyle.font = font132;
-        Label sanityLevel = new Label("INSANE", labelStyle);
 
-        table.add(currentSanity).size(currentSanity.getPrefWidth() * 8, currentSanity.getPrefHeight() * 8);
-//        table.add(sanityLevel).size(sanityLevel.getWidth(), sanityLevel.getHeight()).expandX().center().fillX();
-        table.row();
+        // Sanity bar
+        Table table = new Table();
+        root.add(table).expandY().fillX().top();
+        table.add(currentSanity).size(currentSanity.getPrefWidth() * 8, currentSanity.getPrefHeight() * 8).expandX().center();
 
+        // Menu button
+        TextButton menuButton = new TextButton("||", skin);
+        menuButton.getLabel().setStyle(labelStyle);
+        menuButton.padLeft(40);
+        menuButton.padRight(40);
+        table.add(menuButton).size(menuButton.getPrefWidth(), menuButton.getPrefHeight()).expandX().right();
 
-        // Joystick
-        table.add(joystickControl.getTouchpad()).size(joystickControl.getTouchpad().getWidth(), joystickControl.getTouchpad().getHeight()).expand().left().bottom().padLeft(80);
+        menuButton.addListener( new ClickListener() {
+            @Override
+            public void clicked(InputEvent event, float x, float y) {
+                game.setScreen(new MenuScreen(game));
+            };
+        });
+
+        root.row();
 
         // Action button
+        table = new Table();
+        root.add(table).expand().fill();
         actionButton = new TextButton("COOK AND EAT", skin);
         actionButton.getLabel().setStyle(labelStyle);
-        table.row();
-        table.add(actionButton).size(actionButton.getPrefWidth(), actionButton.getPrefHeight() * 2).expand().right().padRight(20);
         actionButton.setVisible(false);
+        table.add(actionButton).size(actionButton.getPrefWidth(), actionButton.getPrefHeight()).expandX().align(Align.bottomRight).padTop(500).padRight(20);
+
+        root.row();
+
+        // Joystick
+        table = new Table();
+        root.add(table).expandX().fillX();
+        table.add(joystickControl.getTouchpad()).size(joystickControl.getTouchpad().getWidth(), joystickControl.getTouchpad().getHeight()).expandX().left().padLeft(80).padBottom(80);
 
         // Backpack
         toolsButton = new TextButton("BACKPACK", skin);
         toolsButton.getLabel().setStyle(labelStyle);
-        table.row();
-        table.add(toolsButton).size(toolsButton.getPrefWidth(), toolsButton.getPrefHeight() * 2).expand().right().padRight(20);
-        toolsButton.setVisible(false);
-
-
+        toolsButton.pad(60);
+        if(!game.getPlayer().isBackpackCollected()) {
+            toolsButton.setVisible(false);
+        }
+        table.add(toolsButton).size(toolsButton.getPrefWidth(), toolsButton.getPrefHeight()).padRight(20);
 
         toolsButton.addListener( new ClickListener() {
             @Override
@@ -97,20 +109,18 @@ public class Hud {
                 openBackpack();
             };
         });
-
-        table.debugAll();
-
     }
 
     public void initialize(SpriteBatch spriteBatch) {
         // Init stage, skin and root table
-        stage = new Stage(new FitViewport(Gdx.graphics.getWidth(), Gdx.graphics.getHeight()), spriteBatch);
+        stage = new Stage(new ScreenViewport());
         Gdx.input.setInputProcessor(stage);
-        skin = new Skin(Gdx.files.internal("uiskin.json"));
-        table = new Table();
-        table.setFillParent(true);
-        table.setTransform(true);
-        stage.addActor(table);
+        skin = new Skin(Gdx.files.internal("pixthulhu-ui.json"));
+        root = new Table();
+        root.setFillParent(true);
+        root.setTransform(true);
+        stage.addActor(root);
+
 
         // Generate fonts
         FreeTypeFontGenerator generator = new FreeTypeFontGenerator(Gdx.files.internal("Roboto-Regular.ttf"));
@@ -124,8 +134,8 @@ public class Hud {
         labelStyle = new Label.LabelStyle();
 
         // Create joystick
-        joystickBg = new Texture(Gdx.files.internal("joystickBg.png"));
-        joystickKnob = new Texture(Gdx.files.internal("joystickKnob.png"));
+        Texture joystickBg = new Texture(Gdx.files.internal("joystickBg.png"));
+        Texture joystickKnob = new Texture(Gdx.files.internal("joystickKnob.png"));
         joystickControl = new JoystickControl(joystickBg, joystickKnob, 10, 0, 0, 400, 400);
 
 
@@ -140,9 +150,9 @@ public class Hud {
         currentSanity = new Image(sanityBar0);
 
         // Backpack
-        woodTexture = new Texture(Gdx.files.internal("wood.png"));
-        matchesTexture = new Texture(Gdx.files.internal("matches.png"));
-        waterBottleTexture = new Texture(Gdx.files.internal("water_bottle.png"));
+        Texture woodTexture = new Texture(Gdx.files.internal("wood.png"));
+        Texture matchesTexture = new Texture(Gdx.files.internal("matches.png"));
+        Texture waterBottleTexture = new Texture(Gdx.files.internal("water_bottle.png"));
 
         woodImage = new Image(woodTexture);
         matchesImage = new Image(matchesTexture);
@@ -159,7 +169,7 @@ public class Hud {
     public void showDialog(String dialogText) {
         // Dialog label and button styling
         labelStyle.font = font64;
-        dialogLabel = new Label(dialogText, labelStyle);
+        Label dialogLabel = new Label(dialogText, labelStyle);
         okButton = new TextButton("OK", skin);
         okButton.getLabel().setStyle(labelStyle);
 
