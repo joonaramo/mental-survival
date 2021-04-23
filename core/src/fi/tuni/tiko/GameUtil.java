@@ -18,6 +18,7 @@ import com.badlogic.gdx.utils.Array;
 import com.badlogic.gdx.utils.Json;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
@@ -28,13 +29,15 @@ class GameUtil {
 	public static void createWorld(MentalSurvival game) {
 		game.setWorld(new World(new Vector2(0, -9.8f), true));
 		// Load map
-		game.setTiledMap(new TmxMapLoader().load("Taso1.tmx"));
+		game.setTiledMap(new TmxMapLoader().load("Taso1_new.tmx"));
 
-		// Transform tiled walls to box2d bodies
+//		 Transform tiled walls to box2d bodies
 		transformWallsToBodies("world-wall-rectangles", "wall", game.getTiledMap(), game.getWorld());
-		transformWallsToBodies("tools-rectangles", "tool", game.getTiledMap(), game.getWorld());
-		transformWallsToBodies("edibles-rectangles", "collectible", game.getTiledMap(), game.getWorld());
 		transformWallsToBodies("fishing-rectangles", "fishing-area", game.getTiledMap(), game.getWorld());
+		transformWallsToBodies("drinking-rectangles", "water-area", game.getTiledMap(), game.getWorld());
+		transformWallsToBodies("tools-rectangles", "tool", game.getTiledMap(), game.getWorld());
+		transformWallsToBodies("ropes-rectangles", "rope", game.getTiledMap(), game.getWorld());
+		transformWallsToBodies("edibles-rectangles", "collectible", game.getTiledMap(), game.getWorld());
 		transformWallsToBodies("backpack-rectangle", "backpack", game.getTiledMap(), game.getWorld());
 
 		// Create ground to the world
@@ -121,8 +124,12 @@ class GameUtil {
 			type = GameObjectType.TOOL;
 		} else if(userData.equals("fishing-area")) {
 			type = GameObjectType.FISHING;
-		} else  if(userData.equals("backpack")) {
+		} else if(userData.equals("water-area")) {
+			type = GameObjectType.WATER;
+		} else if(userData.equals("backpack")) {
 			type = GameObjectType.BACKPACK;
+		} else if (userData.equals("rope")) {
+			type = GameObjectType.ROPE;
 		}
 
 		GameObjectInfo gameObject = new GameObjectInfo(type, x, y);
@@ -153,13 +160,17 @@ class GameUtil {
 					if(data.type == GameObjectType.BACKPACK) {
 						wallCells = (TiledMapTileLayer) game.getTiledMap().getLayers().get("backpack-layer");
 					}
-
+					if(data.type == GameObjectType.ROPE) {
+						wallCells = (TiledMapTileLayer) game.getTiledMap().getLayers().get("ropes-layer");
+					}
 					float xPos = data.x / 32 * 100;
 					float yPos = data.y / 32 * 100;
 
+					wallCells.setCell((int) Math.round(xPos) - 1, (int) Math.round(yPos), null);
 					wallCells.setCell((int) Math.round(xPos), (int) Math.round(yPos), null);
 					wallCells.setCell((int) Math.round(xPos) + 1, (int) Math.round(yPos), null);
 
+					game.getClearedPositions().add(new Integer[]{Math.round(xPos), Math.round(yPos)});
 					game.getWorld().destroyBody(body);
 				}
 			}
@@ -167,32 +178,44 @@ class GameUtil {
 		game.setBodiesToBeCleared(new Array<Body>());
 	}
 
-	public static void clearOldBodies(MentalSurvival game) {
-		for (Body body : game.getClearedBodies()) {
-			if(body != null) {
-				Object userData = body.getUserData();
-				GameObjectInfo data = (GameObjectInfo) userData;
-				TiledMapTileLayer wallCells = (TiledMapTileLayer) game.getTiledMap().getLayers().get("edibles-layer");
-
-				if(data != null) {
-					if(data.type == GameObjectType.TOOL) {
-						wallCells = (TiledMapTileLayer) game.getTiledMap().getLayers().get("tools-layer");
+	public static void clearOldBodies(MentalSurvival game, Array<Body> bodies, JsonArray positionsArray) {
+		for (Body body : bodies) {
+			for (JsonElement position : positionsArray) {
+				if (body != null) {
+					Object userData = body.getUserData();
+					GameObjectInfo data = (GameObjectInfo) userData;
+					if (data != null && !position.isJsonNull()) {
+						JsonArray positionArray = position.getAsJsonArray();
+						int xPos = (int) (data.x / 32 * 100);
+						int yPos = (int) (data.y / 32 * 100);
+						int clearedX = positionArray.get(0).getAsInt();
+						int clearedY = positionArray.get(1).getAsInt();
+						game.getClearedPositions().add(new Integer[]{clearedX, clearedY});
+						if((Math.round(xPos) == clearedX || Math.round(xPos) + 1 == clearedX) && Math.round(yPos) == clearedY) {
+							if (data.type == GameObjectType.BACKPACK) {
+								TiledMapTileLayer wallCells = (TiledMapTileLayer) game.getTiledMap().getLayers().get("backpack-layer");
+								wallCells.setCell((int) Math.round(xPos) - 1, (int) Math.round(yPos), null);
+								wallCells.setCell((int) Math.round(xPos), (int) Math.round(yPos), null);
+								wallCells.setCell((int) Math.round(xPos) + 1, (int) Math.round(yPos), null);
+								game.getWorld().destroyBody(body);
+							} else if (data.type == GameObjectType.TOOL) {
+								TiledMapTileLayer wallCells = (TiledMapTileLayer) game.getTiledMap().getLayers().get("tools-layer");
+								wallCells.setCell((int) Math.round(xPos) - 1, (int) Math.round(yPos), null);
+								wallCells.setCell((int) Math.round(xPos), (int) Math.round(yPos), null);
+								wallCells.setCell((int) Math.round(xPos) + 1, (int) Math.round(yPos), null);
+								game.getWorld().destroyBody(body);
+							} else if(data.type == GameObjectType.ROPE) {
+								TiledMapTileLayer wallCells = (TiledMapTileLayer) game.getTiledMap().getLayers().get("ropes-layer");
+								wallCells.setCell((int) Math.round(xPos) - 1, (int) Math.round(yPos), null);
+								wallCells.setCell((int) Math.round(xPos), (int) Math.round(yPos), null);
+								wallCells.setCell((int) Math.round(xPos) + 1, (int) Math.round(yPos), null);
+								game.getWorld().destroyBody(body);
+							}
+						}
 					}
-					if(data.type == GameObjectType.BACKPACK) {
-						wallCells = (TiledMapTileLayer) game.getTiledMap().getLayers().get("backpack-layer");
-					}
-
-					float xPos = data.x / 32 * 100;
-					float yPos = data.y / 32 * 100;
-
-					wallCells.setCell((int) Math.round(xPos), (int) Math.round(yPos), null);
-					wallCells.setCell((int) Math.round(xPos) + 1, (int) Math.round(yPos), null);
-
-					game.getWorld().destroyBody(body);
 				}
 			}
 		}
-		game.setClearedBodies(new Array<Body>());
 	}
 
 	public static String getJsonString(Player player) {
@@ -206,42 +229,68 @@ class GameUtil {
 	}
 
 
-	private static Preferences getPreferences() {
+	public static Preferences getPreferences() {
 		return Gdx.app.getPreferences("Game_State");
 	}
 
 	public static void saveGame(MentalSurvival game) {
 		String jsonString = getJsonString(game.getPlayer());
+		Array<Integer[]> clearedPositions = game.getClearedPositions();
+
+		Gdx.app.log("player", jsonString);
+
 		getPreferences()
-	  	.putString("PLAYER", jsonString)
-		.putInteger("GAME_STEP", game.getGameStep())
-		.flush();
-		Gdx.app.log("saved_str", jsonString);
+				.putString("PLAYER", jsonString)
+				.putInteger("GAME_STEP", game.getGameStep())
+				.putInteger("WOOD_TO_COLLECT", game.getWoodToCollect())
+				.putInteger("ROPES_TO_COLLECT", game.getRopesToCollect())
+				.putString("CLEARED_POSITIONS",  new Gson().toJson(clearedPositions))
+				.flush();
 	}
 
 	public static void loadGame(MentalSurvival game) {
-		String str = getPreferences().getString("PLAYER", "{\"backpackCollected\":false,\"canFish\":false,\"hasWater\":false,\"matchCount\":5,\"sanityLevel\":0,\"sleeping\":false,\"speed\":0.015,\"woodCount\":0}\n");
+		String str = getPreferences().getString("PLAYER", "{\"backpackCollected\":false,\"canFish\":false,\"hasWater\":false,\"matchCount\":5,\"positionX\":7.8,\"positionY\":0.7549997,\"sanityLevel\":0,\"sleeping\":false,\"speed\":0.015,\"woodCount\":0,\"ropeCount\":0}\n");
+		String positions = getPreferences().getString("CLEARED_POSITIONS", "{\"items\":[],\"ordered\":true,\"size\":0}");
 		int gameStep = getPreferences().getInteger("GAME_STEP", 0);
+		int woodToCollect = getPreferences().getInteger("WOOD_TO_COLLECT", 0);
+		int ropesToCollect = getPreferences().getInteger("ROPES_TO_COLLECT", 0);
+
+		JsonObject positionsJson = (JsonObject) JsonParser.parseString(positions);
+		JsonArray positionsArray = positionsJson.get("items").getAsJsonArray();
+
+		Array<Body> bodies = new Array<Body>();
+		game.getWorld().getBodies(bodies);
+
+		clearOldBodies(game, bodies, positionsArray);
 
 		JsonObject jsonObject = (JsonObject) JsonParser.parseString(str);
 
 		boolean backpackCollected = jsonObject.get("backpackCollected").getAsBoolean();
 		int woodCount = jsonObject.get("woodCount").getAsInt();
+		int ropeCount = jsonObject.get("ropeCount").getAsInt();
 		boolean canFish = jsonObject.get("canFish").getAsBoolean();
 		boolean hasWater = jsonObject.get("hasWater").getAsBoolean();
 		int matchCount = jsonObject.get("matchCount").getAsInt();
 		int sanityLevel = jsonObject.get("sanityLevel").getAsInt();
 		boolean sleeping = jsonObject.get("sleeping").getAsBoolean();
 		float speed = jsonObject.get("speed").getAsFloat();
+		float positionX = jsonObject.get("positionX").getAsFloat();
+		float positionY = jsonObject.get("positionY").getAsFloat();
 
 		game.setGameStep(gameStep);
+		game.setWoodToCollect(woodToCollect);
+		game.setRopesToCollect(ropesToCollect);
 		game.getPlayer().setBackpackCollected(backpackCollected);
 		game.getPlayer().setWoodCount(woodCount);
+		game.getPlayer().setRopeCount(ropeCount);
 		game.getPlayer().setCanFish(canFish);
 		game.getPlayer().setHasWater(hasWater);
 		game.getPlayer().setMatchCount(matchCount);
 		game.getPlayer().setSanityLevel(sanityLevel);
 		game.getPlayer().setSleeping(sleeping);
 		game.getPlayer().setSpeed(speed);
+		game.getPlayer().createWalkAnimation();
+		game.getPlayer().getBody().getPosition().x = positionX;
+		game.getPlayer().getBody().setTransform(positionX, positionY, game.getPlayer().getBody().getAngle());
 	}
 }

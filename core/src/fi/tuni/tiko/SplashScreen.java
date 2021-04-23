@@ -10,12 +10,18 @@ import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
+import com.badlogic.gdx.graphics.g2d.freetype.FreeTypeFontGenerator;
 import com.badlogic.gdx.scenes.scene2d.InputEvent;
 import com.badlogic.gdx.scenes.scene2d.Stage;
+import com.badlogic.gdx.scenes.scene2d.ui.Label;
+import com.badlogic.gdx.scenes.scene2d.ui.Skin;
 import com.badlogic.gdx.scenes.scene2d.ui.Table;
 import com.badlogic.gdx.scenes.scene2d.ui.TextButton;
 import com.badlogic.gdx.scenes.scene2d.utils.ClickListener;
+import com.badlogic.gdx.utils.viewport.FillViewport;
+import com.badlogic.gdx.utils.viewport.FitViewport;
 import com.badlogic.gdx.utils.viewport.ScreenViewport;
+import com.badlogic.gdx.utils.viewport.StretchViewport;
 
 import java.awt.Menu;
 
@@ -35,29 +41,38 @@ public class SplashScreen extends ScreenAdapter {
         float w = Gdx.graphics.getWidth();
         float h = Gdx.graphics.getHeight();
         camera = new OrthographicCamera();
-        camera.setToOrtho(false, 8, 4.8f);
-        background = new Texture(Gdx.files.internal("Titlescreen.png"));
+        camera.setToOrtho(false, w, h);
+        float widthRatio = w / 1920f;
+        float heightRatio = h / 1080f;
+        stage = new Stage(new StretchViewport(w / widthRatio, h / heightRatio, camera));
+        background = new Texture(Gdx.files.internal("Titlescreen.jpg"));
 
-        stage = new Stage(new ScreenViewport());
         Gdx.input.setInputProcessor(stage);
 
         table = new Table();
         table.setFillParent(true);
         stage.addActor(table);
 
+        Skin skin = new Skin(Gdx.files.internal("pixthulhu-ui.json"));
 
 
-        TextButton.TextButtonStyle style = new TextButton.TextButtonStyle();
+        FreeTypeFontGenerator generator = new FreeTypeFontGenerator(Gdx.files.internal("Roboto-Regular.ttf"));
+        FreeTypeFontGenerator.FreeTypeFontParameter parameter = new FreeTypeFontGenerator.FreeTypeFontParameter();
+        parameter.size = 128;
+        BitmapFont font64 = generator.generateFont(parameter);
+        generator.dispose();
 
-        style.font = new BitmapFont();
+        Label.LabelStyle labelStyle = new Label.LabelStyle();
+        labelStyle.font = font64;
 
-        TextButton button1 = new TextButton("PLAY", style);
 
-        table.add(button1).size(button1.getWidth() * 17, button1.getHeight() * 14 ).expand().bottom();
 
-        button1.debug();
+        TextButton textButton = new TextButton("PLAY", skin);
+        textButton.getLabel().setStyle(labelStyle);
 
-        button1.addListener( new ClickListener() {
+        table.add(textButton).size(textButton.getPrefWidth(), textButton.getPrefHeight()).expand().bottom().padBottom(60);
+
+        textButton.addListener( new ClickListener() {
             @Override
             public void clicked(InputEvent event, float x, float y) {
                 game.setScreen(new MenuScreen(game));
@@ -73,7 +88,7 @@ public class SplashScreen extends ScreenAdapter {
 
         game.batch.setProjectionMatrix(camera.combined);
         game.batch.begin();
-        game.batch.draw(background, 0, 0, 8f, 4.8f);
+        game.batch.draw(background, 0, 0, 1920, 1080);
 //        game.font.draw(game.batch, "Title Screen!", Gdx.graphics.getWidth() * .25f, Gdx.graphics.getHeight() * .75f);
 //        game.font.draw(game.batch, "Click the circle to win.", Gdx.graphics.getWidth() * .25f, Gdx.graphics.getHeight() * .5f);
 //        game.font.draw(game.batch, "Press space to play.", Gdx.graphics.getWidth() * .25f, Gdx.graphics.getHeight() * .25f);

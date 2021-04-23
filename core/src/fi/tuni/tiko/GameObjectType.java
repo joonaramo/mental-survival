@@ -6,6 +6,8 @@ enum GameObjectType {
 	TOOL,
 	BACKPACK,
 	WOOD,
+	WATER,
+	ROPE,
 	FISHING,
 	WALL
 }
