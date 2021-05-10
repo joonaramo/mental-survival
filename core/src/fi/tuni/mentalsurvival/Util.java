@@ -7,7 +7,7 @@ import com.badlogic.gdx.math.Rectangle;
 /**
  * This class contains some utility methods that are not directly related to the gameplay itself.
  */
-class Util {
+public class Util {
 	public static Rectangle scaleRect(Rectangle r, float scale) {
 		Rectangle rectangle = new Rectangle();
 		rectangle.x      = r.x * scale;

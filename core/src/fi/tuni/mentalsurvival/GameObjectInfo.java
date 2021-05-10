@@ -3,7 +3,7 @@ package fi.tuni.mentalsurvival;
 /**
  * This class contains info about the bodies created in our tiled map.
  */
-class GameObjectInfo {
+public class GameObjectInfo {
 	public float x;
 	public float y;
 	GameObjectType type;

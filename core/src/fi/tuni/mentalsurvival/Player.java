@@ -17,7 +17,7 @@ import com.google.gson.annotations.Expose;
 /**
  * Player class contains all the methods and information about the player in the game.
  */
-class Player {
+public class Player {
 	private float radius = 0.25f;
 	@Expose
 	private int sanityLevel = 0;

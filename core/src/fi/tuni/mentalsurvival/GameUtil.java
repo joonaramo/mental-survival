@@ -25,7 +25,7 @@ import com.google.gson.JsonParser;
 /**
  * Game utility class that contains methods for different actions in game (creating the world. transforming tiled map's layers to bodies, saving and loading the game etc.)
  */
-class GameUtil {
+public class GameUtil {
 	/**
 	 * Method that creates our box2d world from tiled map file.
 	 * @param game the game object
